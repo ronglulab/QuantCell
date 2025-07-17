@@ -42,14 +42,29 @@ QuantCell benchmarks itself against these three packages in the paper using the 
 
 # Input
 QuantCell requires two primary types of input data:
-1. 
+1. Gene x cell expression matrix
+
+(Optional) If QuPath is used to segment and annotate marker expression, QuantCell can automatically build the gene x cell matrix from the .csv marker files outputted (see initialization.ipynb). This is how the sample data is given.
+
+2. Marker combos for cell types
+   These are currently implemented as a .json file which maps to a dictionary with the following format:
+```
+marker_combos = {
+   'CellType1' : ['Marker1+', 'Marker2-', 'Marker3+'],
+   'CellType2' : ['Marker2+', 'Marker3-'],
+   'CellType3' : ['Marker4+', 'Marker3-'],
+   ...
+}
+```
+For best results, cell types should be defined by the minimum set of markers needed to differentiate them from other cells. Providing too many markers that are redundant can hurt performance and lead to too few annotated cells. Cells can only be assigned to one cell type and any cell matching more than one, or no, combination will be left as "Other". 
+
 
 # Tutorial
 Use initialization.ipynb to walkthrough the initialization of the .csv marker files, conventional annotation, and create a combined dataframe which is the input to QuantCell.
 
 Use machine_learning.ipynb to walkthrough the annotation of cells using QuantCell with a Random Forest model with hyperparameters selected from the analysis in the paper.
 
-A test dataset is provided along with the expected output.
+A test dataset is provided along with the expected output using hyperparameters tuned by the data in the paper. Expected runtime depends on the capabilities of the computer it is run on but in general should be less than 10 minutes start to finish.
 
 Code to create all figures in the paper can be found in figure_data_generation.ipynb, paper_figures_formatted.ipynb, maps.ipynb, astir.ipynb, and annospat.sh.
 
