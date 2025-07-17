@@ -22,3 +22,5 @@
 * astir 0.1.2
 * MAPS 1.0.0
 * AnnoSpat 1.0.0
+
+*QuantCell was tested using a Python environment with the prerequisite packages below on a dedicated server with Ubuntu 20.04.6 LTS. There are no other hardware or software dependencies but the authors make no guarantee it will work on every system.
