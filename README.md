@@ -44,7 +44,12 @@ QuantCell benchmarks itself against these three packages in the paper using the 
 QuantCell requires two primary types of input data:
 1. Gene x cell expression matrix
 
-(Optional) If QuPath is used to segment and annotate marker expression, QuantCell can automatically build the gene x cell matrix from the .csv marker files outputted (see initialization.ipynb). This is how the sample data is given.
+(Optional) If QuPath is used to segment and annotate marker expression, QuantCell can automatically build the gene x cell matrix from the .csv marker files outputted (see initialization.ipynb). This is how the sample data is given. For this project and the dataset used, we used StarDist to segment the cells using a script in this repo (StarDist cell segmentation script_0.37_um_per_pixel.groovy). 
+ - Once segmented, qualitative marker annotations can be included if they are annotated using QuPath following this tutorial: https://qupath.readthedocs.io/en/0.4/docs/tutorials/multiplex_analysis.html
+ - Quantitative data (measurements and statistics) and qualitative data can be exported by following this QuPath tutorial: https://qupath.readthedocs.io/en/0.4/docs/tutorials/exporting_measurements.html  
+
+   
+
 
 2. Marker combos for cell types
    These are currently implemented as a .json file which maps to a dictionary with the following format:
