@@ -78,24 +78,29 @@ class quantcell_project:
 
         self.column_names = labeled_features.columns.tolist()
 
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(labeled_features, target, train_size = self.train_size, stratify=target, random_state=self.random_seed)
+        if self.train_size == 1.0:
+            self.X_train = scaler.fit_transform(labeled_features)
+            self.y_train = target
+            self.X_test = []
+            self.y_test = []
+        else:
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(labeled_features, target, train_size = self.train_size, stratify=target, random_state=self.random_seed)
 
-        self.X_train = scaler.fit_transform(self.X_train)
-        self.X_test = scaler.transform(self.X_test)
+            self.X_train = scaler.fit_transform(self.X_train)
+            self.X_test = scaler.transform(self.X_test)
 
         self.unlabeled_features = scaler.transform(unlabeled_features)
 
-    def cv_fit_pred(self, name=None, excluded_cols=None, included_cols=None):
+    def cv_fit_pred(self, name=None, excluded_cols=None, included_cols=None, n_splits=10):
         if self.clf == None:
             raise ValueError("No classifier set")
         if excluded_cols and included_cols:
             raise ValueError("Cannot specify both excluded_cols and included_cols. Please choose one.")
-        cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.random_seed)
+        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=self.random_seed)
         y_test={}
         y_pred={}
         y_proba={}
-        i=0
-        for train_index, test_index in tqdm(cv.split(self.X_train, self.y_train), total=cv.n_splits, desc=name):
+        for i, (train_index, test_index) in tqdm(enumerate(cv.split(self.X_train, self.y_train)), total=cv.n_splits, desc=name):
             if excluded_cols is not None:
                 col_mask = [True if col not in excluded_cols else False for col in self.column_names]
             elif included_cols is not None:
@@ -111,9 +116,39 @@ class quantcell_project:
                 y_proba[i] = self.clf.predict_proba(X_test)
             except:
                 y_proba[i] = self.clf.decision_function(X_test)
-            i+=1
         return y_test, y_pred, y_proba
 
+
+    def train_size_analysis(self, train_sizes, n_splits=5, cell_type_exclusion_threshold=0, excluded_cell_types=None):
+        if self.clf == None:
+            raise ValueError("No classifier set")
+        train_size_data={}
+
+        self.train_size = 1.0
+        self.process_data(cell_type_exclusion_threshold=cell_type_exclusion_threshold, excluded_cell_types=excluded_cell_types)
+        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=self.random_seed)
+        for fold_idx, (train_index, test_index) in tqdm(enumerate(cv.split(self.X_train, self.y_train)), total=cv.n_splits, desc="Train size analysis"):
+            X_train_full, X_test = self.X_train[train_index], self.X_train[test_index] 
+            y_train_full, y_test = self.y_train[train_index], self.y_train[test_index]
+            for proportion in train_sizes:
+                if proportion != 1.0:
+                    X_train, _, y_train, _ = train_test_split(X_train_full, y_train_full, train_size=proportion, stratify=y_train_full, random_state=self.random_seed)
+                else:
+                    X_train, y_train = X_train_full, y_train_full
+
+                self.clf.fit(X_train, y_train)
+                y_pred = self.clf.predict(X_test)
+                try:
+                    y_proba = self.clf.predict_proba(X_test)
+                except:
+                    y_proba = self.clf.decision_function(X_test)
+                
+                avg_precision = average_precision_score(y_test, y_proba, average='macro')
+                if proportion not in train_size_data:
+                    train_size_data[proportion] = []
+                train_size_data[proportion].append(avg_precision)
+        return train_size_data
+                
 
     def fit(self, excluded_cols=None, included_cols=None):
         if self.clf == None:

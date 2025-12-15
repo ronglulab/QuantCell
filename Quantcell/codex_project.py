@@ -156,6 +156,8 @@ class codex_project:
         self._data_folders = [data_path + '/' + x for x in folders]
         self.project_name = project_name
         self.read_annotation_strategy(annotation_strategy_path)
+        multi_compartment = False
+
         codex_list = []
         for folder in folders:
             template_file = gb.glob(data_path+'/'+folder+'/*')[0] # use first file in folder as template
@@ -263,6 +265,8 @@ class codex_project:
         for sample in labels:
             self.codex.loc[self.codex['original_folder'] == sample, 'sample'] = labels[sample]
             self._sample_named = True
+
+
     
     def drop_missing(self, max_missing_per_row: int = 2, max_missing_per_col: int = 100, drop_axis=0) -> None:
         if self.codex is None:
@@ -374,6 +378,14 @@ def replace_marker_match_centroids(main_codex, marker_codex, marker):
     for col in cols_to_replace:
         main_codex.loc[:, col] = np.nan
         main_codex.loc[marker_codex['concat'], col] = marker_codex[col].values
+    
+    old_marker_string = main_codex.loc[marker_codex['concat'], 'marker_string']
+    old_marker_string = old_marker_string.str.replace(f'{marker}+', '?')
+    old_marker_string = old_marker_string.str.replace(f'{marker}-', '?')
+    pre = old_marker_string.str.split('?').str[0]
+    post = old_marker_string.str.split('?').str[1]
+    new_marker_string = pre + marker_codex[marker] + post
+    main_codex.loc[marker_codex['concat'], 'marker_string'] = new_marker_string.values
     
     main_codex=main_codex.reset_index(drop=True)
     return main_codex
