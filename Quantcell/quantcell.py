@@ -32,6 +32,7 @@ class quantcell_project:
         self.is_fitted = False
         self.relabeled = False
         self.relabeled_labels = None
+        self.feature_regex = "\w+: (Nucleus|Cytoplasm|Membrane|Cell): (Mean|Median|Min|Max|Std.Dev.)"
 
 
     def initialize(self, base_path, project_name):
@@ -55,7 +56,7 @@ class quantcell_project:
         return self.codex.loc[:, mask]
 
     def _regex_marker_cols(self, col):
-        return re.search("\w+: (Nucleus|Cytoplasm|Membrane|Cell): (Mean|Median|Min|Max|Std.Dev.)", col) != None
+        return re.search(self.feature_regex, col) != None
 
    
     def process_data(self, cell_type_exclusion_threshold=0, excluded_cell_types=None):
@@ -161,6 +162,7 @@ class quantcell_project:
         self.is_fitted = True
 
 
+    # must be run after relabel_unannotated() and before overwrite_codex()
     def PCA_check(self, strategy='all', num_sample=500, cell_types=None, output_dir=None, save=False):
         if strategy not in ['all', 'specific']:
             raise ValueError("Strategy must be 'all' or 'specific'")

@@ -48,8 +48,15 @@ QuantCell requires two primary types of input data:
  - Once segmented, qualitative marker annotations can be included if they are annotated using QuPath following this tutorial: https://qupath.readthedocs.io/en/0.4/docs/tutorials/multiplex_analysis.html
  - Quantitative data (measurements and statistics) and qualitative data can be exported by following this QuPath tutorial: https://qupath.readthedocs.io/en/0.4/docs/tutorials/exporting_measurements.html  
 
-   
+__Important__: If you are providing your own Gene x Cell matrix (skipping initialization.ipynb), your column names must follow the format: MarkerName: Compartment: Measurement.
+* __Compartments allowed:__ Nucleus, Cytoplasm, Membrane, Cell
+* __Measurements allowed:__ Mean, Median, Min, Max, Std.Dev.
+* Example: CD3: Nucleus: Mean, FoxP3: Cell: Median
 
+Alternatively, provide a custom regex that matches columns with quantitative data you would like to use right after initialization of the quantcell_project (in machine_learning.ipynb).
+* Add ```quantcell_project.feature_regex = "..." ```
+
+&nbsp;
 
 2. Marker combos for cell types
    These are currently implemented as a .json file which maps to a dictionary with the following format:

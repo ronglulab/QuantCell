@@ -207,7 +207,8 @@ class codex_project:
                 if 'Centroid X µm' not in df.columns or 'Centroid Y µm' not in df.columns:
                     print(f'Warning: Missing centroid data for {marker} in {folder_path}')
                     if df.shape[0] == codex.shape[0]:
-                        print('~ Resolved: Row shapes match, reusing centroid data from other files')
+                        print('Warning: Row shapes match, reusing centroid data from other file.')
+                        print('Check to make sure this is your intended behavior and that cell order is the same.')
                     else:
                         raise ValueError('Fatal Error: Mismatched shape and no centroid data for ' + marker + ' in ' + folder_path)
                 else:
