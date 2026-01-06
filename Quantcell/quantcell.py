@@ -179,7 +179,7 @@ class quantcell_project:
                 if len(annot_strategy.unique()) > 1:
                     raise ValueError("Multiple annotation strategies found in codex. Please ensure only one annotation strategy is used for 'specific' PCA check.")
                 
-                self.codex_project.read_annotation_strategy(f'../{annot_strategy.unique()[0]}')
+                self.codex_project.read_annotation_strategy(f'../{annot_strategy.unique()[0]}.json')
             except:
                 raise ValueError("No annotation strategy found. Please load an annotation strategy for 'specific' PCA check.")
 
@@ -200,6 +200,9 @@ class quantcell_project:
 
         for _cell_type in cell_types:
             relabeled_mask = np.array(self.relabeled_labels) == _cell_type
+            if sum(relabeled_mask) == 0:
+                print(f"Warning: No cells of type {_cell_type} found in relabeled labels. Skipping PCA plot for this cell type.")
+                continue
             if sum(relabeled_mask) < num_sample:
                 print(f"Warning: Not enough cells of type {_cell_type} for PCA plot. Found {sum(relabeled_mask)} which is less than the requested {num_sample}.")
                 print("Using all available cells for this cell type.")

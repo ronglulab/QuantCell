@@ -18,10 +18,13 @@ QuantCell is a machine learning based framework designed to enhance cell annotat
 * All of the prerequisites mentioned above
 * SciPy 1.11.0
 * seaborn 0.13.2
+* ipykernel 7.1.0
 * pyyaml 6.0
 * astir 0.1.2
 * MAPS 1.0.0
 * AnnoSpat 1.0.0
+
+*ipykernel is needed to run the provided Jupyter notebooks but is not necessary for QuantCell itself
 
 *QuantCell was tested using a Python environment with the prerequisite packages above on a dedicated server with Ubuntu 20.04.6 LTS. There are no other hardware or software dependencies but the authors make no guarantee it will work on every system.
 
@@ -31,8 +34,9 @@ To install the required packages into a new conda environment, you can use conda
 conda create -n "quantcell" python=3.11
 conda activate quantcell
 pip install numpy==1.26.0 pandas==1.5.3 scikit-learn==1.5.0 matplotlib==3.7.1 glob2==0.7 joblib==1.4.2 tqdm==4.65.0
-pip install scipy==1.11.0 seaborn==0.13.2 pyyaml==6.0
+pip install scipy==1.11.0 seaborn==0.13.2 pyyaml==6.0 ipykernel==7.1.0
 ```
+
 ## Running MAPS, astir, and AnnoSpat to create comparison data
 QuantCell benchmarks itself against these three packages in the paper using the same dataset. The code used to benchmark them is provided in maps.ipynb, astir.ipynb, and annospat.sh. Due to version incompatibilities, these files will need to be run in separate python environments. Please see the associated GitHubs for instructions on how to install them:
 * [MAPS](https://github.com/mahmoodlab/MAPS/)

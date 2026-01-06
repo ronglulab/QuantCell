@@ -52,7 +52,8 @@ class codex_project:
         # expects .json format from python script
         try:
             self._marker_combos = json.loads(open(annotation_strategy_path).read())
-            self.annotation_strategy = annotation_strategy_path.split('/')[-1].split('.')[0]
+            _, self.annotation_strategy = os.path.split(annotation_strategy_path)
+            self.annotation_strategy = self.annotation_strategy.split('.')[0]
             self._get_marker_list()
         except:
             raise ValueError('Invalid file format or path')
@@ -131,7 +132,7 @@ class codex_project:
                 continue
             markers_present = []
             for f in files:
-                f = f.split('/')[-1]
+                _, f = os.path.split(f)
                 if " (" in f:
                     marker = f.split(' (')[0]
                 else:
