@@ -1,0 +1,22 @@
+json_key,reference_urls,pmids
+Arterial ECs,https://pmc.ncbi.nlm.nih.gov/articles/PMC7610809/; https://ashpublications.org/blood/article/107/2/535/131454/Platelet-PECAM-1-inhibits-thrombus-formation-in,"31871321, 16166583"
+B Cells,https://www.nature.com/articles/s41467-024-52224-6,39266537
+Capillary ECs,https://pmc.ncbi.nlm.nih.gov/articles/PMC4943525/; https://pmc.ncbi.nlm.nih.gov/articles/PMC5035541/; https://pmc.ncbi.nlm.nih.gov/articles/PMC9942337/,"24646994, 27074508, 36805714"
+CD4 T Cells,https://pmc.ncbi.nlm.nih.gov/articles/PMC11115818/; https://pmc.ncbi.nlm.nih.gov/articles/PMC10802914/,"20556631, 34524664"
+CD8 T Cells,https://pmc.ncbi.nlm.nih.gov/articles/PMC11115818/; https://pmc.ncbi.nlm.nih.gov/articles/PMC10802914/,"20556631, 34524664"
+cDC,https://pmc.ncbi.nlm.nih.gov/articles/PMC6838684/,31668803
+CFU-E,https://pmc.ncbi.nlm.nih.gov/articles/PMC12879316/,36408979
+CLP,https://pmc.ncbi.nlm.nih.gov/articles/PMC6852342/; https://pmc.ncbi.nlm.nih.gov/articles/PMC2640229/,"31282128, 19023891"
+CMP,https://pmc.ncbi.nlm.nih.gov/articles/PMC6852342/; https://pmc.ncbi.nlm.nih.gov/articles/PMC2640229/,"31282128, 19023891"
+Double Negative T Cells,https://pmc.ncbi.nlm.nih.gov/articles/PMC10802914/,34524664
+Other BM ECs,https://pmc.ncbi.nlm.nih.gov/articles/PMC11115818/,20556631
+Erythroblasts,https://pmc.ncbi.nlm.nih.gov/articles/PMC3211121/,21847081
+Erythrocytes,https://pmc.ncbi.nlm.nih.gov/articles/PMC3211121/,21847081
+GMP,https://pmc.ncbi.nlm.nih.gov/articles/PMC6852342/; https://pmc.ncbi.nlm.nih.gov/articles/PMC2640229/,"31282128, 19023891"
+KLS,https://pmc.ncbi.nlm.nih.gov/articles/PMC6852342/; https://pmc.ncbi.nlm.nih.gov/articles/PMC2640229/,"31282128, 19023891"
+MEP,https://pmc.ncbi.nlm.nih.gov/articles/PMC6852342/,31282128
+MkP,https://haematologica.org/article/view/9052; https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.20133,"30573502, 15779060"
+Monocytes,https://pmc.ncbi.nlm.nih.gov/articles/PMC11115818/,20556631
+Neutrophils,https://pmc.ncbi.nlm.nih.gov/articles/PMC11115818/,20556631
+Lepr+ Perivascular Cells,https://pmc.ncbi.nlm.nih.gov/articles/PMC4127103/,24953181
+Megakaryocytes,https://haematologica.org/article/view/9052; https://onlinelibrary.wiley.com/doi/10.1002/cyto.a.20133,"30573502, 15779060"

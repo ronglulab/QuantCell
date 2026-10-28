@@ -1,0 +1,59 @@
+cell_types:
+  Arteries:
+  - CD31
+  B Cells:
+  - CD19
+  - B220
+  CD4 T Cells:
+  - CD3
+  - CD4
+  - TCR
+  CD8 T Cells:
+  - CD3
+  - CD8
+  - TCR
+  CFU-E:
+  - CD117
+  - CD71
+  CLP:
+  - CD127
+  CMP:
+  - CD117
+  - CD34
+  Capillaries/Sinusoids:
+  - Endomucin
+  Double Negative T Cells:
+  - CD3
+  - TCR
+  Endothelial Niche:
+  - CD105
+  Erythroblasts:
+  - Ter119
+  - CD71
+  Erythrocytes:
+  - Ter119
+  GMP:
+  - CD117
+  - Fcgr
+  KLS:
+  - CD117
+  - Sca1
+  MEP:
+  - CD117
+  MkP:
+  - CD117
+  - CD41
+  Monocytes:
+  - CD115
+  - CD11b
+  - F4_80
+  Neutrophils:
+  - CD11b
+  - Ly6g
+  Perivascular Niche:
+  - Lepr
+  Preplatelets:
+  - CD41
+  cDC:
+  - CD11c
+  - MHCII
