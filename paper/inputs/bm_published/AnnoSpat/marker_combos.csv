@@ -1,0 +1,12 @@
+,Arteries,B Cells,Capillaries/Sinusoids,CD4 T Cells,CD8 T Cells,cDC,CFU-E,CLP,CMP,Double Negative T Cells,Endothelial Niche,Erythroblasts,Erythrocytes,GMP,KLS,MEP,MkP,Monocytes,Neutrophils,Perivascular Niche,Preplatelets
+1,CD31,CD19,Endomucin,CD3,CD3,CD11c,CD117,CD3-,CD117,CD3,CD105,Ter119,Ter119,CD117,CD117,CD117,CD117,CD115,CD11b,Lepr,CD41
+2,TCR-,B220,CD117-,CD4,CD8,MHCII,CD71,CD19-,Sca1-,TCR,CD45-,CD45-,CD45-,Sca1-,Sca1,Sca1-,CD41,CD11b,Ly6g,CD45-,CD45-
+3,CD117-,,TCR-,TCR,TCR,,Ter119-,B220-,Fcgr-,CD4-,Ter119-,CD71,CD71-,Fcgr,CD3-,CD34-,Ter119-,F4_80,F4_80-,Ter119-,Ter119-
+4,CD11b-,,CD11b-,CD8-,CD4-,,CD41-,Ly6g-,CD34,CD8-,,,,B220-,B220-,Fcgr-,,Ly6g-,,CD31-,CD117-
+5,Endomucin-,,,,,,,Ter119-,CD19-,,,,,Ter119-,Ter119-,CD3-,,,,,
+6,,,,,,,,TCR-,CD3-,,,,,Ly6g-,CD11b-,B220-,,,,,
+7,,,,,,,,CD11b-,CD11b-,,,,,TCR-,Ly6g-,Ter119-,,,,,
+8,,,,,,,,CD127,B220-,,,,,CD19-,CD19-,CD11b-,,,,,
+9,,,,,,,,,Ly6g-,,,,,CD11b-,TCR-,Ly6g-,,,,,
+10,,,,,,,,,Ter119-,,,,,CD3-,,CD19-,,,,,
+11,,,,,,,,,TCR-,,,,,,,TCR-,,,,,

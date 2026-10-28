@@ -1,3 +1,6 @@
 .git
 __pycache__
 Output/
+output/
+data/
+external_data/

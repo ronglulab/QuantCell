@@ -3,6 +3,7 @@ import numpy as np
 import glob as gb
 import os
 import json
+import re
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
 
@@ -29,34 +30,45 @@ class codex_project:
 
         try:
             self.codex.to_csv(save_path, index=False)
-        except:
-            raise ValueError('Invalid save path')
+        except OSError as e:
+            raise ValueError(f'Could not write codex to {save_path}: {e}') from e
 
     def read_csv(self, csv_path: str, project_name: str, force: bool = False) -> None:
         try:
             self.codex = pd.read_csv(csv_path)
-            verified = self.verify_codex(verbose=False)
-            if not verified and not force:
-                self.codex = None
-                raise ValueError('Inconsistiencies found in codex, verify_codex() to verify construction or use force=True to save anyway')
-            
+        except FileNotFoundError as e:
+            raise ValueError(f'Codex file not found: {csv_path}') from e
+        except (pd.errors.ParserError, pd.errors.EmptyDataError, UnicodeDecodeError) as e:
+            raise ValueError(f'Could not parse {csv_path} as a codex CSV: {e}') from e
+
+        # Deliberately outside the try above: a failed verification is a real,
+        # specific result and must not be re-reported as a file/path problem.
+        verified = self.verify_codex(verbose=False)
+        if not verified and not force:
+            self.codex = None
+            raise ValueError('Inconsistiencies found in codex, verify_codex() to verify construction or use force=True to save anyway')
+
+        try:
             self.annotation_strategy = self.codex.loc[0, 'annotation_strategy']
-            if 'section' in self.codex.columns:
-                self._sectioned = True
-            if 'sample' in self.codex.columns:
-                self._sample_named = True
-        except:
-            raise ValueError('Invalid file format or path')        
+        except KeyError as e:
+            self.codex = None
+            raise ValueError(f"{csv_path} has no 'annotation_strategy' column; not a codex CSV") from e
+        if 'section' in self.codex.columns:
+            self._sectioned = True
+        if 'sample' in self.codex.columns:
+            self._sample_named = True
     
     def read_annotation_strategy(self, annotation_strategy_path: str) -> None:
         # expects .json format from python script
         try:
             self._marker_combos = json.loads(open(annotation_strategy_path).read())
-            _, self.annotation_strategy = os.path.split(annotation_strategy_path)
-            self.annotation_strategy = self.annotation_strategy.split('.')[0]
-            self._get_marker_list()
-        except:
-            raise ValueError('Invalid file format or path')
+        except FileNotFoundError as e:
+            raise ValueError(f'Annotation strategy not found: {annotation_strategy_path}') from e
+        except json.JSONDecodeError as e:
+            raise ValueError(f'Annotation strategy {annotation_strategy_path} is not valid JSON: {e}') from e
+        _, self.annotation_strategy = os.path.split(annotation_strategy_path)
+        self.annotation_strategy = self.annotation_strategy.split('.')[0]
+        self._get_marker_list()
 
     def _get_marker_list(self) -> None:
         if self._marker_combos is None:
@@ -92,6 +104,7 @@ class codex_project:
             if verbose:
                 print(*args, **kwargs)
         def check(condition):
+            nonlocal verified
             if condition:
                 vprint('Passed')
             else:
@@ -103,12 +116,16 @@ class codex_project:
         if self.codex is None:
             raise ValueError('No codex found')
 
-        vprint('Checking for consistent annotation strategy...', end='')
-        check(self.codex.loc[:, 'annotation_strategy'].nunique() == 1)
-
+        # Required columns are checked first: the strategy check below dereferences
+        # one of them, so the original order raised KeyError on exactly the codices
+        # this function exists to reject.
         vprint('Checking for required columns...', end='')
         required_columns = ['cell_type', 'marker_string', 'sample', 'x', 'y', 'original_folder', 'annotation_strategy']
         check(all(col in self.codex.columns for col in required_columns))
+
+        vprint('Checking for consistent annotation strategy...', end='')
+        check('annotation_strategy' in self.codex.columns
+              and self.codex.loc[:, 'annotation_strategy'].nunique() == 1)
 
         vprint('Checking for missing values...', end='')
         check(self.codex.isna().sum().sum() == 0)
@@ -181,6 +198,66 @@ class codex_project:
         self.codex = self.codex.rename(columns={'Centroid X µm': 'x', 'Centroid Y µm': 'y', 'Class' : 'marker_string'})
         self.codex.reset_index(drop=True, inplace=True)
 
+    @staticmethod
+    def _norm_marker(s) -> str:
+        """Normalize a marker/channel name for comparison: uppercase, alphanumeric only."""
+        return re.sub(r'[^A-Z0-9]', '', str(s).upper())
+
+    def _resolve_marker_prefix(self, columns, marker, marker_name, file):
+        """Return the column prefix holding this file's antigen measurements.
+
+        QuPath channel names do not reliably match either the filename or the
+        annotation class. They carry fluorophore suffixes ('CD117 (Cy5)'), clone
+        numbers ('CD90.2'), spacing ('MHC II') or separator variants ('F4_80' vs
+        'F4/80'). Some exports also contain a second, unrelated antigen block --
+        'CD41.csv' carries a 'dapi1' block ahead of its own -- which must not be
+        adopted as this marker's features.
+
+        Exact match against the annotation class wins. Otherwise a prefix is a
+        candidate when it is normalization-compatible with the class OR with the
+        filename marker, and exactly one candidate must remain.
+        """
+        morphology = {'Nucleus', 'Cell', 'Cytoplasm', 'Membrane', 'ROI', 'Image'}
+        prefixes = []
+        for col in columns:
+            if ':' in col:
+                p = col.split(':')[0].strip()
+                if p not in morphology and p not in prefixes and self._norm_marker(p):
+                    prefixes.append(p)
+
+        if not prefixes:
+            # Export formats such as 'ROI: 2.00 um per pixel: CD3: Mean' carry no
+            # leading antigen prefix. They yield no per-compartment features under
+            # any naming (the spatial filter drops them), so the file contributes
+            # its marker calls only. Not an error.
+            return None
+
+        n_cls = self._norm_marker(marker_name)
+        n_mark = self._norm_marker(marker)
+        if not n_cls and not n_mark:
+            raise ValueError(f"Cannot resolve marker channel in {file}: empty class and marker name")
+
+        for p in prefixes:
+            if self._norm_marker(p) == n_cls:
+                return p
+
+        candidates = []
+        for p in prefixes:
+            n_p = self._norm_marker(p)
+            if ((n_cls and (n_p.startswith(n_cls) or n_cls.startswith(n_p))) or
+                    (n_mark and (n_p.startswith(n_mark) or n_mark.startswith(n_p)))):
+                candidates.append(p)
+
+        if len(candidates) == 1:
+            print(f"Warning: {os.path.basename(file)} - using channel '{candidates[0]}' for "
+                  f"marker '{marker}' (annotation class is '{marker_name}')")
+            return candidates[0]
+        if len(candidates) > 1:
+            raise ValueError(f"Ambiguous marker channel for '{marker}' in {file}: {candidates} "
+                             f"are all compatible with class '{marker_name}'")
+        raise ValueError(f"No marker channel found for '{marker}' in {file}: class "
+                         f"'{marker_name}', available prefixes {prefixes}")
+
     def _add_markers(self, codex: pd.DataFrame, folder_path: str) -> pd.DataFrame:
         csv_files = gb.glob(folder_path + '/*.csv')
         spatial_words = ['Area', 'Volume', 'Centroid', 'µm', 'Diameter', 'Circularity', 'Detection', 'Solidity' ,'Length']
@@ -208,8 +285,7 @@ class codex_project:
                 if 'Centroid X µm' not in df.columns or 'Centroid Y µm' not in df.columns:
                     print(f'Warning: Missing centroid data for {marker} in {folder_path}')
                     if df.shape[0] == codex.shape[0]:
-                        print('Warning: Row shapes match, reusing centroid data from other file.')
-                        print('Check to make sure this is your intended behavior and that cell order is the same.')
+                        print('~ Resolved: Row shapes match, reusing centroid data from other files')
                     else:
                         raise ValueError('Fatal Error: Mismatched shape and no centroid data for ' + marker + ' in ' + folder_path)
                 else:
@@ -222,13 +298,21 @@ class codex_project:
                 df.loc[df.Name == "PATHCELLOBJECT", "Class"] = marker + "?"
                 df.loc[df.Name == "OTHER", "Class"] = marker + "-"
 
+                marker_prefix = self._resolve_marker_prefix(df.columns, marker, marker_name, file)
+
                 # Add new label to current labels
                 codex[marker] = df['Class']
                 for col in df.columns:
                     is_spatial=False
-                    new_cname=col.replace(marker_name, marker) # replaces marker_name in file w/ name of file
-                    if ':' in new_cname:
-                        new_cname=marker + ':' + ':'.join(new_cname.split(':')[1:])
+                    if ':' in col:
+                        # Only this marker's own antigen block is renamed onto the
+                        # filename marker. Other blocks (a stray 'dapi1', QuPath
+                        # morphology) are left alone rather than silently adopted.
+                        if col.split(':')[0].strip() != marker_prefix:
+                            continue
+                        new_cname=marker + ':' + ':'.join(col.split(':')[1:])
+                    else:
+                        new_cname=col.replace(marker_name, marker) # replaces marker_name in file w/ name of file
                     for x in spatial_words:
                         if x in new_cname:
                             is_spatial=True
@@ -253,11 +337,11 @@ class codex_project:
             raise ValueError('No sample labels found. Use set_sample_labels() to set sample labels or use force=True to annotate all cells together')
 
         if self._sample_named == False:
-            self.codex.loc[:, 'cell_type'] = self.conventional_annotation(self.codex.loc[:, 'marker_string'], self._marker_combos)
+            self.codex.loc[:, 'cell_type'] = self.rule_based_annotation(self.codex.loc[:, 'marker_string'], self._marker_combos)
         else:
             for sample in self.codex.loc[:, 'sample'].unique():
                 mask = self.codex.loc[:, 'sample'] == sample
-                self.codex.loc[mask, 'cell_type'] = self.conventional_annotation(self.codex.loc[mask, 'marker_string'], self._marker_combos)
+                self.codex.loc[mask, 'cell_type'] = self.rule_based_annotation(self.codex.loc[mask, 'marker_string'], self._marker_combos)
 
 
     def set_sample_labels(self, labels: dict) -> None:
@@ -315,7 +399,7 @@ class codex_project:
             plt.scatter(x, y, s=1, c=section_labels)
             plt.title(collection)
 
-    def verify_sectioning(self, verbose=True) -> None:
+    def verify_sectioning(self, verbose=True) -> bool:
         if not self._sectioned:
             raise ValueError('No sectioning found')
         
@@ -332,6 +416,8 @@ class codex_project:
                 if verbose:
                     print('Passed: All cells assigned in ' + collection)
 
+        return verified
+
 
 
 
@@ -343,7 +429,7 @@ class codex_project:
         e.g. {'CD8 T Cells' : ['CD4-', 'CD3+', 'CD8+'], 'CD4 T Cells' : ['CD4+', 'CD3+', 'CD8-']}
 
     """
-    def conventional_annotation(self, marker_strings: pd.Series, marker_combos: dict) -> list:
+    def rule_based_annotation(self, marker_strings: pd.Series, marker_combos: dict) -> list:
         orig_labs = []
         for _str in marker_strings:
             temp_list=[]
@@ -359,6 +445,8 @@ class codex_project:
         new_labs = self._resolve_labels(orig_labs)
         return new_labs
 
+
+    conventional_annotation = rule_based_annotation   # backward-compatible alias
     def _resolve_labels(self, orig_labs: list) -> list:
         return [x[0] if len(x) == 1 else 'Other' for x in orig_labs]
 
@@ -368,28 +456,93 @@ Function to replace columns in main codex with columns from another codex based 
 
 Useful when the samples need to be resegmented and you need to match up the new segmentations with the old ones
 """
+def replace_marker_token(marker_string, marker, new_call):
+    """Swap the ':<marker><+|-|?>:' token inside a marker_string.
+
+    A marker_string is a ':'-delimited run of '<marker><call>' tokens, e.g.
+    ':B220-:CD105-:CD41+:CD45-:'. Matching whole tokens means 'CD4' cannot hit
+    'CD41'/'CD45', and a pre-existing '?' elsewhere in the string cannot shift the
+    result -- both of which defeated the previous substring/split('?') approach.
+
+    Returns (new_string, matched).
+    """
+    if not isinstance(marker_string, str):
+        return marker_string, False
+    parts = marker_string.split(':')
+    matched = False
+    for i, part in enumerate(parts):
+        if part[:-1] == marker and part[-1:] in ('+', '-', '?'):
+            parts[i] = new_call
+            matched = True
+    return ':'.join(parts), matched
+
+
 def replace_marker_match_centroids(main_codex, marker_codex, marker):
-    cols_to_replace=[x for x  in main_codex.columns if marker in x]
+    """Replace one marker's data in `main_codex` with `marker_codex`'s, matched on
+    cell centroid. Used when samples are resegmented and the new segmentation has to
+    be matched back onto the existing codex.
 
-    marker_codex['concat'] = marker_codex['x'].astype(str) + '_' + marker_codex['y'].astype(str)
-    main_codex['concat'] = main_codex['x'].astype(str) + '_' + main_codex['y'].astype(str)
+    All three representations of the marker are replaced together:
+      1. the quantitative '<marker>: <compartment>: <stat>' columns,
+      2. the binary call column '<marker>',
+      3. the corresponding token inside 'marker_string'.
 
-    marker_codex=marker_codex.loc[marker_codex['concat'].isin(main_codex['concat'])]
+    (3) is not optional. annotate() derives every cell_type from marker_string, so
+    replacing only (1) and (2) leaves the codex internally inconsistent -- the
+    quantitative data and binary calls describe the new segmentation while every
+    cell_type still describes the old one.
 
-    main_codex=main_codex.set_index('concat')
+    Cells in `main_codex` with no centroid match get NaN in the replaced columns and
+    are expected to be removed by drop_missing(). Inputs are not modified.
+    """
+    main_codex = main_codex.copy()
+    marker_codex = marker_codex.copy()
+
+    # Exact-prefix match: the binary call column plus this marker's measurements.
+    # A substring test would make marker='CD4' also select CD41 and CD45.
+    cols_to_replace = [c for c in main_codex.columns
+                       if c == marker or c.split(':')[0].strip() == marker]
+    if marker not in cols_to_replace:
+        raise ValueError(f"No binary call column '{marker}' in main_codex")
+    missing = [c for c in cols_to_replace if c not in marker_codex.columns]
+    if missing:
+        raise ValueError(f"marker_codex is missing columns for '{marker}': {missing[:5]}")
+
+    main_key = (main_codex['x'].astype(str) + '_' + main_codex['y'].astype(str)).values
+    mk_key = (marker_codex['x'].astype(str) + '_' + marker_codex['y'].astype(str)).values
+    if pd.Index(main_key).has_duplicates:
+        raise ValueError('main_codex has duplicate centroids; cannot match unambiguously')
+    if pd.Index(mk_key).has_duplicates:
+        raise ValueError('marker_codex has duplicate centroids; cannot match unambiguously')
+
+    keep = pd.Index(mk_key).isin(set(main_key))
+    marker_codex = marker_codex.loc[keep]
+    marker_codex.index = pd.Index(mk_key[keep])
+
+    original_index = main_codex.index
+    main_codex.index = pd.Index(main_key)
+    target = marker_codex.index
+
     for col in cols_to_replace:
-        main_codex.loc[:, col] = np.nan
-        main_codex.loc[marker_codex['concat'], col] = marker_codex[col].values
-    
-    old_marker_string = main_codex.loc[marker_codex['concat'], 'marker_string']
-    old_marker_string = old_marker_string.str.replace(f'{marker}+', '?')
-    old_marker_string = old_marker_string.str.replace(f'{marker}-', '?')
-    pre = old_marker_string.str.split('?').str[0]
-    post = old_marker_string.str.split('?').str[1]
-    new_marker_string = pre + marker_codex[marker] + post
-    main_codex.loc[marker_codex['concat'], 'marker_string'] = new_marker_string.values
-    
-    main_codex=main_codex.reset_index(drop=True)
+        main_codex[col] = np.nan
+        main_codex.loc[target, col] = marker_codex[col].values
+
+    # rewrite the marker's token in marker_string for the matched cells
+    old_strings = main_codex.loc[target, 'marker_string'].values
+    new_calls = marker_codex[marker].values
+    rebuilt, unmatched = [], 0
+    for old, call in zip(old_strings, new_calls):
+        text, ok = replace_marker_token(old, marker, call)
+        rebuilt.append(text)
+        if not ok:
+            unmatched += 1
+    if unmatched:
+        raise ValueError(f"marker_string held no '{marker}' token for {unmatched} of "
+                         f"{len(rebuilt)} matched cells; refusing to leave marker_string "
+                         f"inconsistent with the replaced calls")
+    main_codex.loc[target, 'marker_string'] = rebuilt
+
+    main_codex.index = original_index
     return main_codex
 
 
@@ -398,8 +551,10 @@ def read_marker_combos(annotations_path):
     # expects .json format from python script
     try:
         marker_combos = json.loads(open(annotations_path).read())
-    except:
-        raise ValueError('Invalid file format or path')
+    except FileNotFoundError as e:
+        raise ValueError(f'Annotation strategy not found: {annotations_path}') from e
+    except json.JSONDecodeError as e:
+        raise ValueError(f'Annotation strategy {annotations_path} is not valid JSON: {e}') from e
     return marker_combos
 
 

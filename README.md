@@ -13,16 +13,18 @@ QuantCell is a machine learning based framework designed to enhance cell annotat
 * glob2 0.7
 * Joblib 1.4.2
 * tqdm 4.65.0
+* LightGBM 4.6.0 (used by the tutorials; any scikit-learn compatible classifier can be used instead)
 
 ## Prerequisites for Replicating Paper Figures
 * All of the prerequisites mentioned above
-* SciPy 1.11.0
+* SciPy 1.10.0
 * seaborn 0.13.2
 * ipykernel 7.1.0
 * pyyaml 6.0
 * astir 0.1.2
 * MAPS 1.0.0
 * AnnoSpat 1.0.0
+* CELESTA (R package; R 4.4.2)
 
 *ipykernel is needed to run the provided Jupyter notebooks but is not necessary for QuantCell itself
 
@@ -33,31 +35,32 @@ To install the required packages into a new conda environment, you can use conda
 ```
 conda create -n "quantcell" python=3.11
 conda activate quantcell
-pip install numpy==1.26.0 pandas==1.5.3 scikit-learn==1.5.0 matplotlib==3.7.1 glob2==0.7 joblib==1.4.2 tqdm==4.65.0
-pip install scipy==1.11.0 seaborn==0.13.2 pyyaml==6.0 ipykernel==7.1.0
+pip install numpy==1.26.0 pandas==1.5.3 scikit-learn==1.5.0 matplotlib==3.7.1 glob2==0.7 joblib==1.4.2 tqdm==4.65.0 lightgbm==4.6.0
+pip install scipy==1.10.0 seaborn==0.13.2 pyyaml==6.0 ipykernel==7.1.0
 ```
 
-## Running MAPS, astir, and AnnoSpat to create comparison data
-QuantCell benchmarks itself against these three packages in the paper using the same dataset. The code used to benchmark them is provided in maps.ipynb, astir.ipynb, and annospat.sh. Due to version incompatibilities, these files will need to be run in separate python environments. Please see the associated GitHubs for instructions on how to install them:
+## Running MAPS, Astir, AnnoSpat, and CELESTA to create comparison data
+QuantCell is benchmarked against these four methods in the paper on the same datasets (scripts in `paper/`). Due to version incompatibilities, they need to be run in separate environments (CELESTA runs in R). Please see the associated GitHubs for instructions on how to install them:
 * [MAPS](https://github.com/mahmoodlab/MAPS/)
 * [astir](https://github.com/camlab-bioml/astir/)
 * [AnnoSpat](https://github.com/faryabiLab/AnnoSpat/)
+* [CELESTA](https://github.com/plevritis-lab/CELESTA)
 
 
 # Input
 QuantCell requires two primary types of input data:
 1. Gene x cell expression matrix
 
-(Optional) If QuPath is used to segment and annotate marker expression, QuantCell can automatically build the gene x cell matrix from the .csv marker files outputted (see initialization.ipynb). This is how the sample data is given. For this project and the dataset used, we used StarDist to segment the cells using a script in this repo (StarDist cell segmentation script_0.37_um_per_pixel.groovy). 
+(Optional) If QuPath is used to segment and annotate marker expression, QuantCell can automatically build the gene x cell matrix from the .csv marker files outputted (see `tutorial/00_QuPath_guide.md` and `02a_initialization_qupath.ipynb`). This is how the sample data is given. For this project and the dataset used, we used StarDist to segment the cells using a script in this repo (StarDist cell segmentation script_0.37_um_per_pixel.groovy). 
  - Once segmented, qualitative marker annotations can be included if they are annotated using QuPath following this tutorial: https://qupath.readthedocs.io/en/0.4/docs/tutorials/multiplex_analysis.html
  - Quantitative data (measurements and statistics) and qualitative data can be exported by following this QuPath tutorial: https://qupath.readthedocs.io/en/0.4/docs/tutorials/exporting_measurements.html  
 
-__Important__: If you are providing your own Gene x Cell matrix (skipping initialization.ipynb), your column names must follow the format: MarkerName: Compartment: Measurement.
+__Important__: If you are providing your own Gene x Cell matrix (see `02b_initialization_custom_table.ipynb`), your column names must follow the format: MarkerName: Compartment: Measurement.
 * __Compartments allowed:__ Nucleus, Cytoplasm, Membrane, Cell
 * __Measurements allowed:__ Mean, Median, Min, Max, Std.Dev.
 * Example: CD3: Nucleus: Mean, FoxP3: Cell: Median
 
-Alternatively, provide a custom regex that matches columns with quantitative data you would like to use right after initialization of the quantcell_project (in machine_learning.ipynb).
+Alternatively, provide a custom regex that matches columns with quantitative data you would like to use right after initialization of the quantcell_project and before `process_data()` (in `03_model_selection.ipynb` and `04_annotation.ipynb`).
 * Add ```quantcell_project.feature_regex = "..." ```
 
 &nbsp;
@@ -72,17 +75,30 @@ marker_combos = {
    ...
 }
 ```
-For best results, cell types should be defined by the minimum set of markers needed to differentiate them from other cells. Providing too many markers that are redundant can hurt performance and lead to too few annotated cells. Cells can only be assigned to one cell type and any cell matching more than one, or no, combination will be left as "Other". 
+For best results, cell types should be defined by the minimum set of markers needed to differentiate them from other cells. Providing too many markers that are redundant can hurt performance and lead to too few annotated cells. Cells can only be assigned to one cell type and any cell matching more than one, or no, combination is left unannotated (labelled "Other"). Negative markers (`-`) are as important as positive ones: they exclude cells that share a positive marker with another cell type.
 
 
 # Tutorial
-Use initialization.ipynb to walkthrough the initialization of the .csv marker files, conventional annotation, and create a combined dataframe which is the input to QuantCell.
+The files in `tutorial/` walk through the full workflow on the sample data (`sample_data/QuantCellPaperO3`, one bone marrow section, 42,434 cells, 25 markers), in this order:
 
-Use machine_learning.ipynb to walkthrough the annotation of cells using QuantCell with a Random Forest model with hyperparameters selected from the analysis in the paper.
+0. `00_QuPath_guide.md`: segment cells, call each marker positive or negative, and export one .csv per marker in QuPath.
+1. `01_define_marker_combinations.ipynb`: write the marker combinations (positive and negative markers for each cell type) to a .json file.
+2. Build the QuantCell input table `codex_rule_based_<project>.csv` with binary marker rule-based annotation, using either
+   - `02a_initialization_qupath.ipynb`, from QuPath .csv exports, or
+   - `02b_initialization_custom_table.ipynb`, from any one-row-per-cell table with feature columns and positive/negative marker calls.
+3. `03_model_selection.ipynb`: compare candidate classifiers by cross-validated macro average precision on the training split, and optionally tune their hyperparameters on your data.
+4. `04_annotation.ipynb`: train the selected model (LightGBM by default), annotate unannotated cells at a user-defined false discovery rate (FDR), check the result with PCA plots, and save `codex_quantcell_<project>.csv`.
 
-A test dataset is provided along with the expected output using hyperparameters tuned by the data in the paper. Expected runtime depends on the capabilities of the computer it is run on but in general should be less than 10 minutes start to finish.
+`hyperparameters/` contains the tuned hyperparameters for all ten classifiers from the bone marrow analysis in the paper. They are a starting point; the best model and settings can differ between datasets.
 
-Code to create all figures in the paper can be found in figure_data_generation.ipynb, paper_figures_formatted.ipynb, maps.ipynb, astir.ipynb, and annospat.sh.
+`sample_data/expected_output.zip` contains the expected output of the tutorials on the sample data.
+
+# Reproducing the paper
+`paper/` contains the code for every analysis, figure and table in the paper, run from the Zenodo deposit and the public external datasets. See `paper/README.md` for the data layout, environments, run order and a figure-by-figure map. Figures are pixel-identical to the paper's with Matplotlib 3.7.1.
+
+Data from the paper (raw PhenoCycler image, QuPath exports, and QuantCell input and output tables) are available on Zenodo: https://doi.org/10.5281/zenodo.23672666.
+
+A video tutorial covering the workflow from QuPath to annotated cells is available at [VIDEO LINK].
 
 # License
    Copyright 2025 Rong Lu Lab
