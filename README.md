@@ -17,7 +17,7 @@ QuantCell is a machine learning based framework designed to enhance cell annotat
 
 ## Prerequisites for Replicating Paper Figures
 * All of the prerequisites mentioned above
-* SciPy 1.10.0
+* SciPy 1.16.3
 * seaborn 0.13.2
 * ipykernel 7.1.0
 * pyyaml 6.0
@@ -36,7 +36,7 @@ To install the required packages into a new conda environment, you can use conda
 conda create -n "quantcell" python=3.11
 conda activate quantcell
 pip install numpy==1.26.0 pandas==1.5.3 scikit-learn==1.5.0 matplotlib==3.7.1 glob2==0.7 joblib==1.4.2 tqdm==4.65.0 lightgbm==4.6.0
-pip install scipy==1.10.0 seaborn==0.13.2 pyyaml==6.0 ipykernel==7.1.0
+pip install scipy==1.16.3 seaborn==0.13.2 pyyaml==6.0 ipykernel==7.1.0
 ```
 
 ## Running MAPS, Astir, AnnoSpat, and CELESTA to create comparison data
