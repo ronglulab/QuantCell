@@ -98,7 +98,9 @@ The files in `tutorial/` walk through the full workflow on the sample data (`sam
 
 Data from the paper (raw PhenoCycler image, QuPath exports, and QuantCell input and output tables) are available on Zenodo: https://doi.org/10.5281/zenodo.23672666.
 
-A video tutorial covering the workflow from QuPath to annotated cells is available at [VIDEO LINK].
+Video walkthroughs of the tutorial:
+* Step 0, QuPath (segmentation, marker calling and export): https://youtu.be/HE_BD0LKfBY
+* Steps 1-4, QuantCell notebooks: https://youtu.be/wcS-BahquwI
 
 # License
    Copyright 2025 Rong Lu Lab
